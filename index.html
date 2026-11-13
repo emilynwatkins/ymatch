@@ -134,6 +134,9 @@ input:focus-visible,textarea:focus-visible,select:focus-visible{outline:3px soli
 /* single checkbox */
 .check{display:flex; gap:.7rem; align-items:flex-start; cursor:pointer}
 .check input{width:1.25rem; height:1.25rem; margin-top:.15rem; accent-color:var(--accent); flex:none}
+.q.compact{padding:.7rem .9rem}
+.q.compact .check{font-size:.9rem; line-height:1.4; color:var(--muted)}
+.q.compact .check input{width:1.1rem; height:1.1rem; margin-top:.1rem}
 
 /* nav */
 .nav{display:flex; justify-content:space-between; gap:12px; margin-top:2.5rem; padding-top:1.25rem; border-top:1px solid var(--line)}
@@ -249,8 +252,7 @@ const PAGES = [
      "A match sees your first name, a few general things you have in common, and your photo if you choose to share it. Your contact info is shared only if you both say yes.",
      "Only your name, gender and BYU email are required. Everything else is optional, but the more you answer, the better we can match you."],
    qs:[
-    check("is18","I am 18 or older.",{required:true}),
-    check("consent","I agree to Ymatch storing my answers to find me a match, and I can ask for them to be deleted anytime.",{required:true}),
+    check("consent","I'm 18 or older, and I agree to Ymatch storing my answers to find me a match. I can ask for them to be deleted anytime.",{required:true,compact:true}),
     field("firstName","First name","text",{required:true,autocomplete:"given-name"}),
     field("email","BYU email","email",{required:true,autocomplete:"email",hint:"Must end in @byu.edu"}),
     field("phone","Phone number","tel",{autocomplete:"tel",hint:"Used only to coordinate a date you've both accepted."})
@@ -476,7 +478,7 @@ function renderQ(q){
         ${q.long?`<p class="count" id="c-${q.id}">${(A[q.id]||"").length}/${q.max}</p>`:""}${err}</div>`;
     }
     case "check":
-      return `<div class="q" data-id="${q.id}"><label class="check"><input type="checkbox" name="${q.id}"${A[q.id]?" checked":""}><span>${esc(q.label)}${req}</span></label>${err}</div>`;
+      return `<div class="q${q.compact?" compact":""}" data-id="${q.id}"><label class="check"><input type="checkbox" name="${q.id}"${A[q.id]?" checked":""}><span>${esc(q.label)}${req}</span></label>${err}</div>`;
   }
   if(q.two) inner = inner.replace('<div class="opts">','<div class="opts two">');
   const legend = q.label ? `<legend>${esc(q.label)}${req}</legend>` : `<legend class="sr">${esc(q.options.join(" or "))}</legend>`;
@@ -521,11 +523,16 @@ function loadDraft(){
     return true;
   }catch(e){ return false; }
 }
+/* Coming from the game-day signup page (signup/?…) → prefill the phone they already gave us */
+function prefillPhone(){
+  const p = (new URLSearchParams(location.search).get("phone")||"").replace(/\D/g,"").replace(/^1/,"");
+  if(!A.phone && /^[2-9]\d{2}[2-9]\d{6}$/.test(p)) A.phone = `(${p.slice(0,3)}) ${p.slice(3,6)}-${p.slice(6)}`;
+}
 function resetAll(){
   clearDraft(); for(const k of Object.keys(A)) delete A[k];
   for(const k of Object.keys(pageTimes)) delete pageTimes[k];
   draftId=null;
-  photoPreview=null; pageIx=0; $("#resume").hidden=true; renderPage();
+  photoPreview=null; pageIx=0; $("#resume").hidden=true; prefillPhone(); renderPage();
 }
 $("#startOver").addEventListener("click",resetAll);
 $("#clearDraft").addEventListener("click",resetAll);
@@ -688,6 +695,7 @@ function buildPayload(kind){
       else if(q.impute){ target[id]=q.impute(A); imputed.push(id); }
     }
   }
+  identity.is18 = identity.consent === true;   // one checkbox covers both
   const os = orthodoxy(A);
   if(os!=null) answers.orthodoxyScore = Math.round(os*10)/10;
   order.push("orthodoxyScore");
@@ -791,9 +799,7 @@ function finish(payload,preview){
     try{ resumed = await resumeFromServer(rid.toLowerCase()); }catch(e){}
   }
   if(resumed) $("#resume").hidden=false;
-  // Coming from the game-day signup page (signup/?…) → prefill the phone they already gave us
-  const p = (new URLSearchParams(location.search).get("phone")||"").replace(/\D/g,"").replace(/^1/,"");
-  if(!A.phone && /^[2-9]\d{2}[2-9]\d{6}$/.test(p)) A.phone = `(${p.slice(0,3)}) ${p.slice(3,6)}-${p.slice(6)}`;
+  prefillPhone();
   renderPage();
 })();
 </script>

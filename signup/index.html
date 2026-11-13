@@ -247,7 +247,7 @@ function setFriendMode(on){
   friendMode = on;
   $("back-btn").hidden = !on;
   $("signup-sub").textContent = on
-    ? "Add a friend's number and we'll text them the link. Only add someone who's okay hearing from us."
+    ? "Add a friend's number and we'll text them the link."
     : "We pick your match and plan the date. Just drop your number.";
   $("phone-label").textContent = on ? "Friend's phone number" : "Phone number";
   $("consent-fine").hidden = on;   // the friend agrees when they reply / sign up, not the person adding them
