@@ -182,7 +182,7 @@ const SUPABASE_URL = "https://ddaptymtkldlffofgbcb.supabase.co";   // your proje
 const SUPABASE_KEY = "sb_publishable_kdIPqbqzHlMCvDHlYn0N9Q_DQmm-RLp";   // your project's anon or publishable key (safe to put in a web page)
 const LIVE = !!(SUPABASE_URL && SUPABASE_KEY);   // leave either one empty for preview mode
 const REFERRAL_URL = "https://byu-ymatch.vercel.app/signup/?src=referral";
-const SURVEY_VERSION = "v24-2026-11";   // v24: removed Google Calendar question (availability shown to everyone)
+const SURVEY_VERSION = "v1";
 
 /* ---------- question builders (everything optional unless required:true) ---------- */
 const choice = (id,label,options,o={}) => ({id,label,type:"choice",options,...o});
