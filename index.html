@@ -181,7 +181,8 @@ pre{white-space:pre-wrap; word-break:break-word; font-size:.8rem; background:var
 const SUPABASE_URL = "https://ddaptymtkldlffofgbcb.supabase.co";   // your project URL, like https://abcdefgh.supabase.co
 const SUPABASE_KEY = "sb_publishable_kdIPqbqzHlMCvDHlYn0N9Q_DQmm-RLp";   // your project's anon or publishable key (safe to put in a web page)
 const LIVE = !!(SUPABASE_URL && SUPABASE_KEY);   // leave either one empty for preview mode
-const SURVEY_VERSION = "v21-2026-11";
+const REFERRAL_URL = "https://byu-ymatch.vercel.app/signup/?src=referral";
+const SURVEY_VERSION = "v22-2026-11";   // v22: gender + required phone on page 1, source tag
 
 /* ---------- question builders (everything optional unless required:true) ---------- */
 const choice = (id,label,options,o={}) => ({id,label,type:"choice",options,...o});
@@ -250,16 +251,16 @@ const PAGES = [
    intro:[
      "Your name and contact info are stored separately from your answers, linked only by a random ID. We never sell or share your data.",
      "A match sees your first name, a few general things you have in common, and your photo if you choose to share it. Your contact info is shared only if you both say yes.",
-     "Only your name, gender and BYU email are required. Everything else is optional, but the more you answer, the better we can match you."],
+     "Only your name, gender, BYU email and phone are required. Everything else is optional, but the more you answer, the better we can match you."],
    qs:[
     check("consent","I'm 18 or older, and I agree to Ymatch storing my answers to find me a match. I can ask for them to be deleted anytime.",{required:true,compact:true}),
     field("firstName","First name","text",{required:true,autocomplete:"given-name"}),
     field("email","BYU email","email",{required:true,autocomplete:"email",hint:"Must end in @byu.edu"}),
-    field("phone","Phone number","tel",{autocomplete:"tel",hint:"Used only to coordinate a date you've both accepted."})
+    field("phone","Phone number","tel",{required:true,autocomplete:"tel",hint:"We'll text you about your match and to set up your date."}),
+    choice("gender","I am a",["Man","Woman"],{required:true})
  ]},
  { title:"About you",
    qs:[
-    choice("gender","I am a",["Man","Woman"],{required:true}),
     field("age","Your age","number",{min:18,max:99}),
     field("hometown","Hometown","text",{hint:"City and state or country."}),
     field("major","Your major","text"),
@@ -524,6 +525,14 @@ function loadDraft(){
   }catch(e){ return false; }
 }
 /* Coming from the game-day signup page (signup/?…) → prefill the phone they already gave us */
+function prefillFromLink(){
+  const q = new URLSearchParams(location.search);
+  // Where they came from (flyer, sign, referral, …). The first tag someone arrives with is kept.
+  if(!A._source) A._source = (q.get("src") || "direct").replace(/[^\w() -]/g,"").slice(0,60) || "direct";
+  const g = q.get("g");
+  if(!A.gender && (g==="Man" || g==="Woman")) A.gender = g;
+  prefillPhone();
+}
 function prefillPhone(){
   const p = (new URLSearchParams(location.search).get("phone")||"").replace(/\D/g,"").replace(/^1/,"");
   if(!A.phone && /^[2-9]\d{2}[2-9]\d{6}$/.test(p)) A.phone = `(${p.slice(0,3)}) ${p.slice(3,6)}-${p.slice(6)}`;
@@ -532,7 +541,7 @@ function resetAll(){
   clearDraft(); for(const k of Object.keys(A)) delete A[k];
   for(const k of Object.keys(pageTimes)) delete pageTimes[k];
   draftId=null;
-  photoPreview=null; pageIx=0; $("#resume").hidden=true; prefillPhone(); renderPage();
+  photoPreview=null; pageIx=0; $("#resume").hidden=true; prefillFromLink(); renderPage();
 }
 $("#startOver").addEventListener("click",resetAll);
 $("#clearDraft").addEventListener("click",resetAll);
@@ -699,7 +708,7 @@ function buildPayload(kind){
   const os = orthodoxy(A);
   if(os!=null) answers.orthodoxyScore = Math.round(os*10)/10;
   order.push("orthodoxyScore");
-  return {kind:kind||"final", draftId:ensureId(), lastPage:pageIx, timing:pageTimes, version:SURVEY_VERSION, identity, answers, imputed, order, website:document.querySelector('[name=website]').value};
+  return {kind:kind||"final", source:A._source||"direct", draftId:ensureId(), lastPage:pageIx, timing:pageTimes, version:SURVEY_VERSION, identity, answers, imputed, order, website:document.querySelector('[name=website]').value};
 }
 
 /* ---------- navigation and submit ---------- */
@@ -760,7 +769,8 @@ function drawCard(){
     g.fillStyle="#F3ECE6"; rows.forEach((r,k)=>g.fillText(r,148,y+k*62));
     y+=(rows.length-1)*62+112;
   }
-  g.fillStyle="#B3A79E"; g.font=`500 36px ${font}`; g.fillText("Take the quiz at Ymatch",90,H-90);
+  g.fillStyle="#B3A79E"; g.font=`500 36px ${font}`; g.fillText("Get matched at",90,H-140);
+  g.fillStyle="#FFFFFF"; g.font=`700 44px ${font}`; g.fillText("byu-ymatch.vercel.app",90,H-82);
   return c;
 }
 function showCard(box){
@@ -771,6 +781,21 @@ function showCard(box){
   const b=document.createElement("button"); b.type="button"; b.className="primary"; b.textContent="Save this card";
   b.addEventListener("click",()=>{ const a=document.createElement("a"); a.href=c.toDataURL("image/png"); a.download="my-ymatch-card.png"; a.click(); });
   box.appendChild(b);
+  // One-tap share (phone share sheet: Messages, Instagram, etc.), with the referral tag on the link
+  const url=REFERRAL_URL;
+  const s=document.createElement("button"); s.type="button"; s.className="secondary"; s.style.marginTop=".6rem";
+  s.textContent="Send to a friend";
+  s.addEventListener("click",async()=>{
+    const text="I just signed up for Ymatch. They set you up on a date. Takes 20 seconds:";
+    try{
+      const blob=await new Promise(r=>c.toBlob(r,"image/png"));
+      const file=new File([blob],"my-ymatch-card.png",{type:"image/png"});
+      if(navigator.canShare && navigator.canShare({files:[file]})){ await navigator.share({files:[file],text:`${text} ${url}`}); return; }
+      if(navigator.share){ await navigator.share({text,url}); return; }
+    }catch(e){ if(e && e.name==="AbortError") return; }
+    try{ await navigator.clipboard.writeText(url); s.textContent="Link copied!"; }catch(e){ prompt("Copy this link:",url); }
+  });
+  box.appendChild(s);
 }
 
 function finish(payload,preview){
@@ -781,7 +806,7 @@ function finish(payload,preview){
   d.innerHTML=`<div class="done-box"><h2 class="big" tabindex="-1">You're in${name?`, <span>${esc(name)}</span>`:""}.</h2>
     <p><strong>Here's what happens next:</strong></p>
     <ol class="next-steps">
-      <li>We'll email your BYU address when we've found you a match.</li>
+      <li>We'll text you when we've found you a match.</li>
       <li>You'll see a few things you have in common and say yes or no. Nothing is booked until you both say yes.</li>
       <li>We plan the date and send you both the details.</li>
     </ol>
@@ -799,7 +824,7 @@ function finish(payload,preview){
     try{ resumed = await resumeFromServer(rid.toLowerCase()); }catch(e){}
   }
   if(resumed) $("#resume").hidden=false;
-  prefillPhone();
+  prefillFromLink();
   renderPage();
 })();
 </script>

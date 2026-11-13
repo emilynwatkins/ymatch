@@ -73,6 +73,15 @@ button[disabled]{opacity:.55; cursor:progress}
 .done-box p{margin:0 0 1.25rem}
 .notice{background:var(--accent-soft); border-radius:12px; padding:.7rem 1rem; margin:1rem 0 0; font-size:.92rem}
 .done-box .friend-note{margin:0 0 1rem}
+/* choice pills, copied from the questionnaire */
+.gender-lab{margin-top:1rem}
+.opts.two{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+.opt{position:relative}
+.opt input{position:absolute; opacity:0; inset:0; margin:0; cursor:pointer}
+.opt span{display:block; text-align:center; padding:.75rem .6rem; border:1.5px solid var(--line); border-radius:12px;
+  background:var(--bg); cursor:pointer; user-select:none; font-weight:600; transition:background .12s, border-color .12s}
+.opt input:checked + span{background:var(--accent); border-color:var(--accent); color:var(--accent-ink)}
+.opt input:focus-visible + span{outline:3px solid var(--accent); outline-offset:2px}
 /* "Back" link on the friend screen: same look as the questionnaire's text links */
 .backlink{
   display:inline-block; width:auto; background:none; border:0; padding:.6rem 0; margin:0 0 .25rem;
@@ -94,6 +103,12 @@ button[disabled]{opacity:.55; cursor:progress}
         <label class="lab" for="phone" id="phone-label">Phone number</label>
         <input id="phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="(801) 555-1234" required>
         <p class="err" id="err" aria-live="polite"></p>
+        <p class="lab gender-lab" id="gender-label">I'm a</p>
+        <div class="opts two" role="radiogroup" aria-labelledby="gender-label">
+          <label class="opt"><input type="radio" name="gender" value="Man"><span>Man</span></label>
+          <label class="opt"><input type="radio" name="gender" value="Woman"><span>Woman</span></label>
+        </div>
+        <p class="err" id="gender-err" aria-live="polite"></p>
       </div>
       <button type="submit" class="primary" id="submit-btn">I'm in</button>
     </form>
@@ -139,7 +154,7 @@ const btn = $("submit-btn");
 const QUEUE_KEY = "ymatch-pending-signups";
 
 // Which QR code/spot this came from, e.g. signup/?src=north-gate
-const SOURCE = (new URLSearchParams(location.search).get("src") || "direct").slice(0, 60);
+const SOURCE = ((new URLSearchParams(location.search).get("src") || "direct").replace(/[^\w() -]/g, "").slice(0, 60)) || "direct";
 
 /* ---------- phone formatting ---------- */
 const digitsOnly = (s) => (s || "").replace(/\D/g, "");
@@ -212,10 +227,16 @@ $("signup-form").addEventListener("submit", async (e) => {
     phoneInput.focus();
     return;
   }
+  const gEl = document.querySelector('input[name="gender"]:checked');
+  if (!gEl){
+    $("gender-err").textContent = "Tap one so we can match you.";
+    return;
+  }
+  const gender = gEl.value;
   const isFriend = friendMode;
-  // Friend signups keep the QR spot but are marked, e.g. "north-gate (friend)"
-  const source = isFriend ? `${SOURCE} (friend)`.slice(0, 60) : SOURCE;
-  const record = { phone: "+1" + d, source, consent_text: true, user_agent: navigator.userAgent.slice(0, 200) };
+  // Friends added from this page count as referrals
+  const source = isFriend ? "referral" : SOURCE;
+  const record = { phone: "+1" + d, source, gender, consent_text: true, user_agent: navigator.userAgent.slice(0, 200) };
 
   btn.disabled = true; btn.textContent = "Saving…";
   try { await saveWithRetry(record); }
@@ -234,7 +255,8 @@ $("signup-form").addEventListener("submit", async (e) => {
   } else {
     ownPhone = d;
     // Hand the number to the questionnaire so it's prefilled and responses link back by phone
-    $("questionnaire-link").href = `${QUESTIONNAIRE_URL}?phone=${encodeURIComponent(d)}`;
+    const qs = new URLSearchParams({ phone: d, g: gender, src: SOURCE });
+    $("questionnaire-link").href = `${QUESTIONNAIRE_URL}?${qs}`;
   }
   showDone();
 });
@@ -250,9 +272,15 @@ function setFriendMode(on){
     ? "Add a friend's number and we'll text them the link."
     : "We pick your match and plan the date. Just drop your number.";
   $("phone-label").textContent = on ? "Friend's phone number" : "Phone number";
+  $("gender-label").textContent = on ? "My friend is a" : "I'm a";
   $("consent-fine").hidden = on;   // the friend agrees when they reply / sign up, not the person adding them
   btn.textContent = on ? "Add my friend" : "I'm in";
 }
+function clearGender(){
+  document.querySelectorAll('input[name="gender"]').forEach(r => r.checked = false);
+  $("gender-err").textContent = "";
+}
+document.querySelectorAll('input[name="gender"]').forEach(r => r.addEventListener("change", () => $("gender-err").textContent = ""));
 function showDone(){
   setFriendMode(false);
   $("step-signup").hidden = true;
@@ -263,6 +291,7 @@ function showDone(){
 
 $("another-btn").addEventListener("click", () => {
   phoneInput.value = ""; err.textContent = ""; phoneInput.classList.remove("invalid");
+  clearGender();
   setFriendMode(true);
   $("step-done").hidden = true; $("step-signup").hidden = false;
   window.scrollTo(0, 0);
