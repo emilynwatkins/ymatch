@@ -72,6 +72,12 @@ button[disabled]{opacity:.55; cursor:progress}
 .done-box{background:var(--surface); border:1.5px solid var(--line); border-radius:16px; padding:1.5rem}
 .done-box p{margin:0 0 1.25rem}
 .notice{background:var(--accent-soft); border-radius:12px; padding:.7rem 1rem; margin:1rem 0 0; font-size:.92rem}
+.done-box .friend-note{margin:0 0 1rem}
+/* "Back" link on the friend screen: same look as the questionnaire's text links */
+.backlink{
+  display:inline-block; width:auto; background:none; border:0; padding:.6rem 0; margin:0 0 .25rem;
+  color:var(--accent); font-weight:600; font-size:1rem; text-decoration:underline; text-underline-offset:3px;
+}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -81,16 +87,17 @@ button[disabled]{opacity:.55; cursor:progress}
 
   <!-- Step 1: phone number -->
   <section id="step-signup">
-    <p class="sub">We pick your match and plan the date. Just drop your number.</p>
+    <button type="button" class="backlink" id="back-btn" hidden>← Back to my questionnaire</button>
+    <p class="sub" id="signup-sub">We pick your match and plan the date. Just drop your number.</p>
     <form id="signup-form" novalidate>
       <div class="q">
-        <label class="lab" for="phone">Phone number</label>
+        <label class="lab" for="phone" id="phone-label">Phone number</label>
         <input id="phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="(801) 555-1234" required>
         <p class="err" id="err" aria-live="polite"></p>
       </div>
       <button type="submit" class="primary" id="submit-btn">I'm in</button>
     </form>
-    <p class="fine">
+    <p class="fine" id="consent-fine">
       By tapping “I'm in,” you agree to get texts from Ymatch about the questionnaire and your match.
       Msg &amp; data rates may apply. Reply STOP anytime to opt out.
     </p>
@@ -101,6 +108,7 @@ button[disabled]{opacity:.55; cursor:progress}
   <section id="step-done" hidden>
     <div class="done-box">
       <h2 class="big" tabindex="-1">You're <span>in.</span></h2>
+      <p class="notice friend-note" id="friend-added" hidden></p>
       <p>To get matched, fill out the full questionnaire. It takes about 15 minutes.</p>
       <div class="stack">
         <a class="btn primary" id="questionnaire-link" href="../">Start the questionnaire</a>
@@ -204,7 +212,10 @@ $("signup-form").addEventListener("submit", async (e) => {
     phoneInput.focus();
     return;
   }
-  const record = { phone: "+1" + d, source: SOURCE, consent_text: true, user_agent: navigator.userAgent.slice(0, 200) };
+  const isFriend = friendMode;
+  // Friend signups keep the QR spot but are marked, e.g. "north-gate (friend)"
+  const source = isFriend ? `${SOURCE} (friend)`.slice(0, 60) : SOURCE;
+  const record = { phone: "+1" + d, source, consent_text: true, user_agent: navigator.userAgent.slice(0, 200) };
 
   btn.disabled = true; btn.textContent = "Saving…";
   try { await saveWithRetry(record); }
@@ -213,21 +224,51 @@ $("signup-form").addEventListener("submit", async (e) => {
     if (!q.some(r => r.phone === record.phone)) q.push(record);
     setQueue(q); showQueue();
   }
+  btn.disabled = false;
 
-  // Hand the number to the questionnaire so it's prefilled and responses link back by phone
-  $("questionnaire-link").href = `${QUESTIONNAIRE_URL}?phone=${encodeURIComponent(d)}`;
+  if (isFriend){
+    // Keep the questionnaire button pointed at the original person's number
+    const n = $("friend-added");
+    n.textContent = `Added ${formatDisplay(d)}. We'll text your friend the link.`;
+    n.hidden = false;
+  } else {
+    ownPhone = d;
+    // Hand the number to the questionnaire so it's prefilled and responses link back by phone
+    $("questionnaire-link").href = `${QUESTIONNAIRE_URL}?phone=${encodeURIComponent(d)}`;
+  }
+  showDone();
+});
+
+/* ---------- friend mode: same form, with a way back ---------- */
+let friendMode = false;
+let ownPhone = null;
+
+function setFriendMode(on){
+  friendMode = on;
+  $("back-btn").hidden = !on;
+  $("signup-sub").textContent = on
+    ? "Add a friend's number and we'll text them the link. Only add someone who's okay hearing from us."
+    : "We pick your match and plan the date. Just drop your number.";
+  $("phone-label").textContent = on ? "Friend's phone number" : "Phone number";
+  $("consent-fine").hidden = on;   // the friend agrees when they reply / sign up, not the person adding them
+  btn.textContent = on ? "Add my friend" : "I'm in";
+}
+function showDone(){
+  setFriendMode(false);
   $("step-signup").hidden = true;
   $("step-done").hidden = false;
-  btn.disabled = false; btn.textContent = "I'm in";
   window.scrollTo(0, 0);
   document.querySelector("#step-done h2").focus();
-});
+}
 
 $("another-btn").addEventListener("click", () => {
-  phoneInput.value = ""; err.textContent = "";
+  phoneInput.value = ""; err.textContent = ""; phoneInput.classList.remove("invalid");
+  setFriendMode(true);
   $("step-done").hidden = true; $("step-signup").hidden = false;
+  window.scrollTo(0, 0);
   showQueue(); phoneInput.focus();
 });
+$("back-btn").addEventListener("click", showDone);
 </script>
 </body>
 </html>
