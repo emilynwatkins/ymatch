@@ -182,7 +182,7 @@ const SUPABASE_URL = "https://ddaptymtkldlffofgbcb.supabase.co";   // your proje
 const SUPABASE_KEY = "sb_publishable_kdIPqbqzHlMCvDHlYn0N9Q_DQmm-RLp";   // your project's anon or publishable key (safe to put in a web page)
 const LIVE = !!(SUPABASE_URL && SUPABASE_KEY);   // leave either one empty for preview mode
 const REFERRAL_URL = "https://byu-ymatch.vercel.app/signup/?src=referral";
-const SURVEY_VERSION = "v23-2026-11";   // v23: cut 3 write-ins + 4 overlapping questions; write-ins moved to the last page
+const SURVEY_VERSION = "v24-2026-11";   // v24: removed Google Calendar question (availability shown to everyone)
 
 /* ---------- question builders (everything optional unless required:true) ---------- */
 const choice = (id,label,options,o={}) => ({id,label,type:"choice",options,...o});
@@ -321,14 +321,13 @@ const PAGES = [
  { title:"Logistics",
    intro:"A few things we need before we can plan a date for you.",
    qs:[
-    choice("calendar","Want to link your Google Calendar so we can find a time you're both free?",["Yes, send me a secure link","No, I'll pick times"],{hint:"We'd only see when you're busy, never what your events are."}),
     choice("transport","How do you get around?",["I have a car","Bike or scooter","Walk or bus"]),
     multi("cantEat","Any foods you can't or won't eat?",["None","Nuts","Gluten","Dairy","Shellfish","Eggs","Vegetarian","Vegan","Other"],{exclusive:"None"})
  ]},
  { title:"Planning your date",
    intro:"We use this only to plan a date you'll both enjoy.",
    qs:[
-    multi("availability","Which times are you usually free for a date?",["Monday evening","Tuesday evening","Wednesday evening","Thursday evening","Friday evening","Saturday daytime","Saturday evening","Sunday"],{hint:"Pick all that apply.",showIf:A=>A.calendar!=="Yes, send me a secure link"}),
+    multi("availability","Which times are you usually free for a date?",["Monday evening","Tuesday evening","Wednesday evening","Thursday evening","Friday evening","Saturday daytime","Saturday evening","Sunday"],{hint:"Pick all that apply."}),
     choice("severe","Are any of your food restrictions serious enough that the restaurant must be told?",["Yes","No"],{showIf:A=>(A.cantEat||[]).some(x=>x!=="None")}),
     multi("comfort","What would make you comfortable on a first date?",["Daytime","Busy public place","An activity to focus on","Short, under 90 minutes"],{hint:"Pick all that apply."}),
     choice("menSpend","What are you willing to spend on a first date?",["Under $15","$15–30","$30–50","$50+"],{showIf:A=>A.gender==="Man"}),
