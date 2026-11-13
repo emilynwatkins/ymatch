@@ -791,6 +791,9 @@ function finish(payload,preview){
     try{ resumed = await resumeFromServer(rid.toLowerCase()); }catch(e){}
   }
   if(resumed) $("#resume").hidden=false;
+  // Coming from the game-day signup page (signup/?…) → prefill the phone they already gave us
+  const p = (new URLSearchParams(location.search).get("phone")||"").replace(/\D/g,"").replace(/^1/,"");
+  if(!A.phone && /^[2-9]\d{2}[2-9]\d{6}$/.test(p)) A.phone = `(${p.slice(0,3)}) ${p.slice(3,6)}-${p.slice(6)}`;
   renderPage();
 })();
 </script>

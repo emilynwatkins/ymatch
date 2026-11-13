@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ymatch: get set up on a date</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
+<style>
+/* ---------- tokens (copied from the questionnaire so both pages match) ---------- */
+:root{
+  --bg:#FBF7F3; --surface:#FFFFFF; --ink:#1F1A17; --muted:#6B625C; --line:#E8DFD6;
+  --accent:#C63D22; --accent-ink:#FFFFFF; --accent-soft:#FCE9E3; --error:#A0153E;
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#17120F; --surface:#221B17; --ink:#F3ECE6; --muted:#B3A79E; --line:#3A2F29;
+    --accent:#FF8466; --accent-ink:#2A0F08; --accent-soft:#3A2119; --error:#FF7A93;
+    color-scheme:dark;
+  }
+}
+*,*::before,*::after{box-sizing:inherit}
+[hidden]{display:none !important}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  font-size:17px; line-height:1.5;
+}
+.wrap{max-width:480px; margin:0 auto; padding:28px 20px 48px}
+
+.brand,h2{font-family:"Bricolage Grotesque",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.brand{font-weight:800; font-size:clamp(2.4rem,7vw,3.4rem); letter-spacing:-0.03em; line-height:1; margin:0}
+.brand span{color:var(--accent)}
+.sub{color:var(--muted); margin:.5rem 0 1.5rem}
+
+h2{font-size:1.75rem; font-weight:800; letter-spacing:-0.02em; line-height:1.15; margin:0 0 .4rem}
+h2:focus{outline:none}
+h2.big{font-size:clamp(2.4rem,8vw,3.2rem); line-height:1; margin-bottom:.75rem}
+h2.big span{color:var(--accent)}
+
+.q{border:1px solid var(--line); background:var(--surface); border-radius:16px; margin:0 0 .9rem; padding:1.05rem 1.1rem 1.15rem}
+.lab{font-weight:600; font-size:1.05rem; margin:0 0 .65rem; display:block}
+.err{color:var(--error); font-size:.9rem; margin:.5rem 0 0}
+.err:empty{display:none}
+
+input[type=tel]{
+  width:100%; font:inherit; font-size:1.4rem; letter-spacing:.02em; font-variant-numeric:tabular-nums;
+  color:var(--ink); background:var(--bg);
+  border:1.5px solid var(--line); border-radius:10px; padding:.7rem .85rem;
+}
+input:focus-visible{outline:3px solid var(--accent); outline-offset:1px; border-color:var(--accent)}
+input.invalid{border-color:var(--error)}
+
+button,.btn{
+  display:block; width:100%; text-align:center; text-decoration:none;
+  font:inherit; font-weight:600; font-size:1.1rem;
+  border-radius:999px; padding:.9rem 1.4rem; cursor:pointer; border:1.5px solid var(--accent);
+  -webkit-tap-highlight-color:transparent;
+}
+.primary{background:var(--accent); color:var(--accent-ink)}
+.secondary{background:transparent; color:var(--accent)}
+button:focus-visible,.btn:focus-visible{outline:3px solid var(--accent); outline-offset:3px}
+button[disabled]{opacity:.55; cursor:progress}
+.stack > * + *{margin-top:.75rem}
+
+.fine{font-size:.8rem; color:var(--muted); margin:1rem .2rem 0}
+.or{color:var(--muted); font-size:.95rem; text-align:center; margin:1rem 0 .75rem}
+.done-box{background:var(--surface); border:1.5px solid var(--line); border-radius:16px; padding:1.5rem}
+.done-box p{margin:0 0 1.25rem}
+.notice{background:var(--accent-soft); border-radius:12px; padding:.7rem 1rem; margin:1rem 0 0; font-size:.92rem}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <p class="brand">Y<span>match</span></p>
+
+  <!-- Step 1: phone number -->
+  <section id="step-signup">
+    <p class="sub">We pick your match and plan the date. Just drop your number.</p>
+    <form id="signup-form" novalidate>
+      <div class="q">
+        <label class="lab" for="phone">Phone number</label>
+        <input id="phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="(801) 555-1234" required>
+        <p class="err" id="err" aria-live="polite"></p>
+      </div>
+      <button type="submit" class="primary" id="submit-btn">I'm in</button>
+    </form>
+    <p class="fine">
+      By tapping “I'm in,” you agree to get texts from Ymatch about the questionnaire and your match.
+      Msg &amp; data rates may apply. Reply STOP anytime to opt out.
+    </p>
+    <p class="notice" id="queued" hidden></p>
+  </section>
+
+  <!-- Step 2: success + optional questionnaire -->
+  <section id="step-done" hidden>
+    <div class="done-box">
+      <h2 class="big" tabindex="-1">You're <span>in.</span></h2>
+      <p>To get matched, fill out the full questionnaire. It takes about 15 minutes.</p>
+      <div class="stack">
+        <a class="btn primary" id="questionnaire-link" href="../">Start the questionnaire</a>
+      </div>
+      <p class="or">Busy right now? We'll text you the link.</p>
+      <button type="button" class="secondary" id="another-btn">Sign up a friend</button>
+    </div>
+  </section>
+</main>
+
+<script>
+/* =========================================================
+   CONFIG
+   ========================================================= */
+const SUPABASE_URL = "https://ddaptymtkldlffofgbcb.supabase.co";
+// Public by design. RLS + grants only let this key INSERT into quick_signups.
+// (Uses the legacy anon JWT because PostgREST accepts it in the Authorization header.)
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkYXB0eW10a2xkbGZmb2ZnYmNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ0MDk0MDksImV4cCI6MjEwOTk4NTQwOX0.ye2F-RmjmquAT-RNV-djezO6rxRC4abyqR7P1RLF5qs";
+const TABLE = "quick_signups";
+// The questionnaire lives one folder up (the repo's root index.html).
+const QUESTIONNAIRE_URL = "../";
+/* ========================================================= */
+
+const $ = (id) => document.getElementById(id);
+const phoneInput = $("phone");
+const err = $("err");
+const btn = $("submit-btn");
+const QUEUE_KEY = "ymatch-pending-signups";
+
+// Which QR code/spot this came from, e.g. signup/?src=north-gate
+const SOURCE = (new URLSearchParams(location.search).get("src") || "direct").slice(0, 60);
+
+/* ---------- phone formatting ---------- */
+const digitsOnly = (s) => (s || "").replace(/\D/g, "");
+// US area codes never start with 0 or 1, so a leading 1 is always the country code
+const normalize = (raw) => digitsOnly(raw).replace(/^1/, "").slice(0, 10);
+function formatDisplay(d){
+  if (d.length < 4) return d;
+  if (d.length < 7) return `(${d.slice(0,3)}) ${d.slice(3)}`;
+  return `(${d.slice(0,3)}) ${d.slice(3,6)}-${d.slice(6)}`;
+}
+const isValid = (d) => /^[2-9]\d{2}[2-9]\d{6}$/.test(d);
+
+phoneInput.addEventListener("input", () => {
+  phoneInput.value = formatDisplay(normalize(phoneInput.value));
+  phoneInput.classList.remove("invalid");
+  err.textContent = "";
+});
+
+/* ---------- saving ---------- */
+async function saveSignup(record){
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${TABLE}`, {
+    method: "POST",
+    headers: {
+      "apikey": SUPABASE_ANON_KEY,
+      "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+      "Content-Type": "application/json",
+      "Prefer": "return=minimal",
+    },
+    body: JSON.stringify(record),
+  });
+  if (res.ok || res.status === 409) return true;   // 409 = already signed up, which is fine
+  const text = await res.text().catch(() => "");
+  if (text.includes("23505")) return true;
+  throw new Error(`Save failed (${res.status})`);
+}
+async function saveWithRetry(record, tries = 3){
+  let last;
+  for (let i = 0; i < tries; i++){
+    try { return await saveSignup(record); }
+    catch (e){ last = e; await new Promise(r => setTimeout(r, 800 * (i + 1))); }
+  }
+  throw last;
+}
+
+/* Stadium signal is bad: if a save fails, keep it on this phone and retry while the page is open. */
+function getQueue(){ try { return JSON.parse(localStorage.getItem(QUEUE_KEY) || "[]"); } catch { return []; } }
+function setQueue(q){ try { localStorage.setItem(QUEUE_KEY, JSON.stringify(q)); } catch {} }
+function showQueue(){
+  const n = getQueue().length;
+  $("queued").hidden = !n;
+  if (n) $("queued").textContent = `${n} signup${n > 1 ? "s" : ""} saved on this phone. They'll send automatically when the signal comes back, so keep this page open.`;
+}
+async function flushQueue(){
+  const q = getQueue(); if (!q.length) return;
+  const left = [];
+  for (const rec of q){ try { await saveSignup(rec); } catch { left.push(rec); } }
+  setQueue(left); showQueue();
+}
+setInterval(flushQueue, 15000);
+window.addEventListener("online", flushQueue);
+flushQueue(); showQueue();
+
+/* ---------- submit ---------- */
+$("signup-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const d = normalize(phoneInput.value);
+  if (!isValid(d)){
+    phoneInput.classList.add("invalid");
+    err.textContent = "Double-check that number. We need 10 digits.";
+    phoneInput.focus();
+    return;
+  }
+  const record = { phone: "+1" + d, source: SOURCE, consent_text: true, user_agent: navigator.userAgent.slice(0, 200) };
+
+  btn.disabled = true; btn.textContent = "Saving…";
+  try { await saveWithRetry(record); }
+  catch {
+    const q = getQueue();
+    if (!q.some(r => r.phone === record.phone)) q.push(record);
+    setQueue(q); showQueue();
+  }
+
+  // Hand the number to the questionnaire so it's prefilled and responses link back by phone
+  $("questionnaire-link").href = `${QUESTIONNAIRE_URL}?phone=${encodeURIComponent(d)}`;
+  $("step-signup").hidden = true;
+  $("step-done").hidden = false;
+  btn.disabled = false; btn.textContent = "I'm in";
+  window.scrollTo(0, 0);
+  document.querySelector("#step-done h2").focus();
+});
+
+$("another-btn").addEventListener("click", () => {
+  phoneInput.value = ""; err.textContent = "";
+  $("step-done").hidden = true; $("step-signup").hidden = false;
+  showQueue(); phoneInput.focus();
+});
+</script>
+</body>
+</html>
