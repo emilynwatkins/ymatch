@@ -156,7 +156,7 @@ pre{white-space:pre-wrap; word-break:break-word; font-size:.8rem; background:var
 <body>
 <main class="wrap">
   <p class="brand">Y<span>match</span></p>
-  <p class="sub">Takes about 15 minutes to fill out.</p>
+  <p class="sub">Takes about 10 minutes to fill out.</p>
   <div class="resume" id="resume" hidden><span>We saved your answers from last time, so you can pick up where you left off.</span><button type="button" class="linkbtn" id="startOver">Start over</button></div>
   <div class="progress" id="progress" aria-hidden="true"></div>
   <p class="where" id="where"></p>
@@ -182,7 +182,7 @@ const SUPABASE_URL = "https://ddaptymtkldlffofgbcb.supabase.co";   // your proje
 const SUPABASE_KEY = "sb_publishable_kdIPqbqzHlMCvDHlYn0N9Q_DQmm-RLp";   // your project's anon or publishable key (safe to put in a web page)
 const LIVE = !!(SUPABASE_URL && SUPABASE_KEY);   // leave either one empty for preview mode
 const REFERRAL_URL = "https://byu-ymatch.vercel.app/signup/?src=referral";
-const SURVEY_VERSION = "v22-2026-11";   // v22: gender + required phone on page 1, source tag
+const SURVEY_VERSION = "v23-2026-11";   // v23: cut 3 write-ins + 4 overlapping questions; write-ins moved to the last page
 
 /* ---------- question builders (everything optional unless required:true) ---------- */
 const choice = (id,label,options,o={}) => ({id,label,type:"choice",options,...o});
@@ -231,17 +231,17 @@ const FUN_PAGES = [
    intro:"Go with your gut and pick the one that's more you.",
    qs:[
     pair("wyrFamily","Live near family, or move wherever the best opportunity is?","Live near family","Move for the opportunity"),
-    pair("wyrMoney","Spend extra money on a trip, or put it in savings?","Take the trip","Save it"),
+    pair("wyrMoney","Spend extra money on a trip, or put it in savings?","Take the trip","Save it")
  ]},
  { title:"Would you rather date someone who…",
    intro:"Both are great. Which matters more to you?",
    qs:[
-    pair("pConversation","Loves deep late-night conversations, or easy, lighthearted fun?","Deep conversations","Lighthearted fun"),
+    pair("pConversation","Loves deep late-night conversations, or easy, lighthearted fun?","Deep conversations","Lighthearted fun")
  ]},
  { title:"This or that",
    intro:"Rapid fire. Don't overthink it.",
    qs:[
-    pair("totSports","","Live sports","Movie night"),
+    pair("totSports","","Live sports","Movie night")
  ]}
 ];
 
@@ -273,35 +273,28 @@ const PAGES = [
  { title:"What you're looking for",
    qs:[
     choice("lookingFor","What are you looking for right now?",["Casual dating","Something serious","Dating toward marriage in the next 1–2 years"]),
-    choice("marriageTiming","When would you ideally like to be married?",["Within a year","1–2 years","3–5 years","5+ years","Not sure"]),
     choice("kidsCount","How many children would you like?",["None","1–2","3–4","5 or more","Not sure yet"]),
     choice("kidsOpen","Would you date someone who wants a different number of kids than you?",["Yes","Maybe","No"]),
     ages("ageRange","Age range you'd date"),
     hrange("heightRange","Heights you'd date",{options:["Anyone taller than me","Anyone shorter than me","No preference","A specific range"]}),
     choice("datePrevMarriedKids","Would you date someone who's been married before or has children?",["Yes","Maybe","No"]),
-    multi("matterMost","Which 3 things matter most to you in a match?",["Shared faith","Family plans","Kindness","Sense of humor","Ambition","Physical attraction","Shared interests","Similar lifestyle","Emotional maturity","Good communication","Financial stability","Shared politics"],{max:3}),
-    text("hope","Describe your ideal match.",{long:true})
+    multi("matterMost","Which 3 things matter most to you in a match?",["Shared faith","Family plans","Kindness","Sense of humor","Ambition","Physical attraction","Shared interests","Similar lifestyle","Emotional maturity","Good communication","Financial stability","Shared politics"],{max:3})
  ]},
  { title:"Family life",
    qs:[
-    choice("kidsTiming","When would you like to start having kids?",["Right after marriage","1–2 years after marriage","3–5 years after marriage","5+ years after marriage","Not sure yet","Don't have strong feelings"],{showIf:A=>A.kidsCount!=="None"}),
     choice("stayHomeSelf","Would you like to stay home with young kids?",["Yes","Part-time","No","Not sure"],{showIf:A=>A.kidsCount!=="None"}),
     choice("stayHomeSpouse","Would you like your spouse to stay home with young kids?",["Yes","Part-time","No","Not sure"],{showIf:A=>A.kidsCount!=="None"})
  ]},
  { title:"Values",
    qs:[
     multi("coreValues","Which values do you prioritize most?",VALUES,{max:3,hint:"Pick up to 3."}),
-    scale("politics","Where would you place yourself politically?",1,7,"Very liberal","Very conservative"),
-    choice("politicsOpen","Would you date someone with different political views?",["Yes","Only if they're close to mine","No"]),
-    text("lifeGoals","What are 3 things you want to accomplish in your life?",{long:true,max:400})
+    scale("politics","Where would you place yourself politically?",1,7,"Very liberal","Very conservative")
  ]},
  { title:"Your everyday life",
    qs:[
     choice("bedtime","On a typical weeknight, when do you go to sleep?",["Before 10","10–11","11–12","After 12"]),
     choice("nightsOut","How many evenings a week do you want to be out socially?",["0–1","2–3","4+"]),
-    choice("partnerOutgoing","Compared to you, how outgoing do you want a partner to be?",["Less","About the same","More","Doesn't matter"]),
-    text("idealSaturday","Describe your ideal Saturday.",{long:true}),
-    text("favorites","Share a few favorite books, podcasts, songs, TV shows, or movies. Why do you like them?",{long:true,max:400})
+    choice("partnerOutgoing","Compared to you, how outgoing do you want a partner to be?",["Less","About the same","More","Doesn't matter"])
  ]},
  { title:"Faith",
    qs:[
@@ -323,8 +316,7 @@ const PAGES = [
     choice("differentFaith","Would you date someone of a different faith?",["Yes","Maybe","No"]),
     choice("dateAlcohol","Would you date someone who drinks alcohol?",["Yes","No","Depends"],standardsFollowUp("alcohol")),
     choice("dateTobacco","Would you date someone who uses tobacco or vapes?",["Yes","No","Depends"],standardsFollowUp("tobacco")),
-    choice("dateCoffee","Would you date someone who drinks coffee or tea?",["Yes","No","Depends"],standardsFollowUp("coffee")),
-    text("faithJourney","Anything else you'd like to share about your faith?",{long:true,max:600,hint:"This is the place for anything the questions above didn't capture, like your faith journey."})
+    choice("dateCoffee","Would you date someone who drinks coffee or tea?",["Yes","No","Depends"],standardsFollowUp("coffee"))
  ]},
  { title:"Logistics",
    intro:"A few things we need before we can plan a date for you.",
@@ -352,13 +344,18 @@ const PAGES = [
    qs:[
     photo("photo","Add a photo")
  ]},
- { title:"Last step",
+ { title:"Almost done",
    qs:[
     choice("photoShare","Can we share your photo with matches when we send them info about you?",["Yes","No"],{showIf:A=>!!A.photo}),
-    choice("hearAbout","How did you hear about Ymatch?",["Instagram or social media","A friend","Flyer or poster","Class or club announcement","Other"]),
-    text("blockList","Anyone you don't want to be matched with?",{long:true,max:500,hint:"For example, an ex or someone you've had a bad date with. Names or BYU emails."}),
-    text("lostInterest","What's made you lose interest after a first date in the past?",{long:true,max:400}),
-    text("dealbreakers","Anything that's a dealbreaker for you?",{long:true,max:400})
+    text("blockList","Anyone you don't want to be matched with?",{long:true,max:500,hint:"For example, an ex or someone you've had a bad date with. Names or BYU emails."})
+ ]},
+ { title:"In your own words",
+   intro:"All optional, but this is what we read most closely when we pick your match. A sentence or two each is plenty.",
+   qs:[
+    text("hope","Describe your ideal match.",{long:true,placeholder:"e.g. Someone who laughs easily, loves being outside, and takes their faith seriously."}),
+    text("idealSaturday","Describe your ideal Saturday.",{long:true,placeholder:"e.g. Hike the Y in the morning, waffles with roommates, then a board game night."}),
+    text("favorites","Share a few favorite books, podcasts, songs, TV shows, or movies. Why do you like them?",{long:true,max:400,placeholder:"e.g. Brandon Sanderson books, because the worlds feel real."}),
+    text("dealbreakers","Anything that's a dealbreaker for you?",{long:true,max:400,placeholder:"e.g. Not wanting kids, or being rude to waiters."})
  ]}
 ];
 
@@ -473,7 +470,7 @@ function renderQ(q){
         <input id="f-photo" name="photo" type="file" accept="image/*"><div id="photo-preview">${photoHTML()}</div>${err}</div>`;
     case "text": {
       const tag = q.long
-        ? `<textarea id="f-${q.id}" name="${q.id}" maxlength="${q.max}" placeholder="A sentence or two is plenty.">${esc(A[q.id]??"")}</textarea>`
+        ? `<textarea id="f-${q.id}" name="${q.id}" maxlength="${q.max}" placeholder="${esc(q.placeholder||"A sentence or two is plenty.")}">${esc(A[q.id]??"")}</textarea>`
         : `<input id="f-${q.id}" name="${q.id}" type="text" maxlength="${q.max}" value="${esc(A[q.id]??"")}">`;
       return `<div class="q" data-id="${q.id}"><label class="lab" for="f-${q.id}">${esc(q.label)}</label>${hint}${tag}
         ${q.long?`<p class="count" id="c-${q.id}">${(A[q.id]||"").length}/${q.max}</p>`:""}${err}</div>`;
